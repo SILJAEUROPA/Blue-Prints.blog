@@ -1,0 +1,48 @@
+---
+sidebar: false
+description: "A blog for technical information security topics and interesting things we find along the way."
+
+listing:
+  date-format: short
+  feed: true
+  filter-ui: false
+  type: table
+  sort-ui: false
+  sort: "date desc"
+  categories: false
+  fields: [title, date]
+  id: blog-posts
+  contents: [content/blog/blogs.yml, content/blog/posts]
+page-layout: full
+format:
+  html:
+    anchor-sections: true
+
+---
+
+### About the Contributors
+
+::: panel-tabset
+
+### {{< bi twitter >}} @McKinleyMike
+
+Michael McKinley is a Lead Security Engineer in the financial services sector. He is responsible for detecting, disrupting, profiling, and disclosing attacks by APTs targeting the financial industry, such as the attempt by FIN7 to spread malware through the spoofing of the SEC EDGAR filing system. Additionally, Michael has discovered and disclosed security vulnerabilities in leading enterprise software.
+
+When not hacking, Michael enjoys spending time in the great outdoors.
+
+### {{< bi twitter >}} @TheLatteri
+
+Tony Latteri is a seasoned blue team operator and Principal Security Engineer in the financial services sector with a passion to deny, degrade, and disrupt cyber adversary operations. 
+
+When not bringing pain to the adversary, Tony enjoys picking up and putting down heavy things.
+
+:::
+
+## Blog Posts
+
+::: {#blog-posts}
+:::
+
+## Subscribe 
+
+Subscribe via [{{< bi rss  >}}](content/blog/blog.xml) RSS to recieve updates.

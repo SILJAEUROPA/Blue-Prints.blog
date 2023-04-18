@@ -1,0 +1,41 @@
+project:
+  type: website
+
+website:
+  title: "Blue-Prints Blog"
+  site-url: https://www.blue-prints.blog/
+  site-path: '/'
+  google-analytics: 
+    tracking-id: "G-XGT9C0L1TL"
+    anonymize-ip: true
+  description: "Blue-Prints Information Security Blog"
+  navbar:
+    background: "#2e3f58"
+    left:
+      - href: index.html
+        text: "Home"
+      - href: content/blog/blog.html
+        text: "Blog"
+    right:
+      - href: content/blog/blog.xml
+        icon: rss
+      - href: https://www.blue-prints.blog
+        icon: github
+
+format:
+  html:
+    theme: 
+      dark: assets/theme-dark.scss
+      light: assets/theme-light.scss
+    toc: true
+    smooth-scroll: true
+    highlight-style: github
+ 
+execute:
+  freeze: auto
+
+resources:
+  - CNAME
+
+
+
