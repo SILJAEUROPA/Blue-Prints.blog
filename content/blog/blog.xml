@@ -1,0 +1,1308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Blue-Prints Blog</title>
+<link>https://www.blue-prints.blog/content/blog/blog.html</link>
+<atom:link href="https://www.blue-prints.blog/content/blog/blog.xml" rel="self" type="application/rss+xml"/>
+<description>Blue-Prints Information Security Blog</description>
+<generator>quarto-1.3.287</generator>
+<lastBuildDate>Tue, 18 Apr 2023 04:00:00 GMT</lastBuildDate>
+<item>
+  <title>Log Timing Delays in Splunk Could be Putting Your Security at Risk</title>
+  <dc:creator>Michael McKinley</dc:creator>
+  <link>https://www.blue-prints.blog/content/blog/posts/splunk/splunklogdelay.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<section id="a-tale-of-two-times" class="level3">
+<h3 class="anchored" data-anchor-id="a-tale-of-two-times">A Tale of Two Times</h3>
+<p><strong>BLUF:</strong> Logging delay to Splunk as little as 100ms can cause alerts to be missed. This post talks about this issue, detection, and offers a solution.</p>
+<p>Splunk is a powerful platform for collecting, indexing, and analyzing data from various sources. However, it is critically important to understand the nuances of how Splunk handles time; forgoing such consideration may lead to missing critical events.</p>
+<section id="time" class="level4">
+<h4 class="anchored" data-anchor-id="time">_time</h4>
+<p>The <code>_time</code> field in Splunk represents the timestamp of an event as specified by the source log. This field is critical for time-based analysis, such as identifying trends, detecting anomalies, and correlating events across different sources. This is the time that is visualized by Splunk when viewing search results, and is used as the time variable when performing searches.</p>
+</section>
+<section id="indextime" class="level4">
+<h4 class="anchored" data-anchor-id="indextime">_indextime</h4>
+<p>The <code>_indextime</code> field in Splunk represents the timestamp when the event is indexed by Splunk, which may not always be the same as the <code>_time</code> field. Simply, this is the time Splunk logged the event, the time it becomes avaiable in search, and it will almost always differ from <code>_time</code>, even if by miliseconds.</p>
+</section>
+</section>
+<section id="a-wrinkle-in-time" class="level3">
+<h3 class="anchored" data-anchor-id="a-wrinkle-in-time">A Wrinkle in Time</h3>
+<p>Why do the times differ?</p>
+<p>Truth is, there is delay, there are many points in the ingestion pipeline that can cause delay such as: * Network latency * Logging throughput capacity * Logging interval * Clock skew</p>
+<p>The issue with timing delays in Splunk is that it can cause alerts to be missed, which can have serious consequences for security and other critical operations.</p>
+<p>For instance, if an alert is monitoring a critical system, but there is a delay between the <code>_time</code> and <code>_indextime</code> timestamps, <strong>the alert may not be triggered even when events occur.</strong></p>
+</section>
+<section id="small-delay-big-problem" class="level3">
+<h3 class="anchored" data-anchor-id="small-delay-big-problem">Small Delay = Big Problem</h3>
+<p>How much delay can cause events to be missed?</p>
+<p>This is a question that many previous discussions on this topic fail to address. While many may note delays of days, hours, or minutes, causing issue; it is important to note that <strong>delays of milliseconds can result in missed events</strong>. In testing, delays as little as 100ms resulted in missed events, and theoretically, the number may even be lower. This raises an important question - are you confident that all of your critical logging sources consistently log in near real-time?</p>
+</section>
+<section id="delay-detection" class="level3">
+<h3 class="anchored" data-anchor-id="delay-detection">Delay Detection</h3>
+<p><strong>Can I calculate delays in my log sources?</strong></p>
+<p>Yes, Splunk has a great article on this: <a href="https://docs.splunk.com/Documentation/Splunk/9.0.4/Troubleshooting/Troubleshootingeventsindexingdelay">here</a>.</p>
+<p>TL;DR To discover log delays subtract <code>_time</code> from <code>_indextime</code>.</p>
+<p><code>index=example_delay | eval delay_sec=_indextime-_time | eval delay_minute=(delay_sec/60) | timechart span=1h avg(delay_minute) by index</code></p>
+<p><img src="https://www.blue-prints.blog/content/blog/posts/splunk/splunk_blog_1.png" title="Fig 1. Example Timechart for Splunk Search" class="quarto-discovered-preview-image img-fluid"> <em>Fig 1. Example Timechart for Splunk Search</em></p>
+<p><strong>Can I discover if any of my recent saved searches missed events?</strong></p>
+<p>Yes, a simple method is to re-run the same search and compare the results, if the results differ over the same time period, there is likely a timing issue.</p>
+<p>Below is an example script in python to identify saved searches with timing issues. For information on usage go: here. I’ve run this script against an lab instance of Splunk with intentially induced delays, the results are below.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#Code to detect and graph differences in recently ran searches</span></span>
+<span id="cb1-2"></span>
+<span id="cb1-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Import required libraries</span></span>
+<span id="cb1-4"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> time</span>
+<span id="cb1-5"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> json</span>
+<span id="cb1-6"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> splunklib.client <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> client</span>
+<span id="cb1-7"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> splunklib.results <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> results</span>
+<span id="cb1-8"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> matplotlib.pyplot <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> plt</span>
+<span id="cb1-9"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> matplotlib.dates <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> mdates</span>
+<span id="cb1-10"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> datetime <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> datetime, timedelta</span>
+<span id="cb1-11"></span>
+<span id="cb1-12"></span>
+<span id="cb1-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Function to connect to the Splunk service</span></span>
+<span id="cb1-14"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> splunk_connect(base_url, port, splunk_account, splunk_password):</span>
+<span id="cb1-15"></span>
+<span id="cb1-16">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">try</span>:</span>
+<span id="cb1-17">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Connect to the Splunk service</span></span>
+<span id="cb1-18">        service <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> client.<span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">connect</span>(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>base_url, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>port, username<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>splunk_account, password<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>splunk_password)</span>
+<span id="cb1-19">        <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Connected to Splunk instance: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(base_url))</span>
+<span id="cb1-20">        <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-21">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">except</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Exception</span> <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> e:</span>
+<span id="cb1-22">        <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Error in Connecting to Splunk: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(e))</span>
+<span id="cb1-23">    </span>
+<span id="cb1-24">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Return the service object</span></span>
+<span id="cb1-25">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">return</span> service</span>
+<span id="cb1-26"></span>
+<span id="cb1-27"></span>
+<span id="cb1-28"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Function to compare jobs</span></span>
+<span id="cb1-29"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> compare_jobs(service,owner,graph):</span>
+<span id="cb1-30">    </span>
+<span id="cb1-31">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Get the list of search jobs</span></span>
+<span id="cb1-32">    search_jobs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> service.jobs.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">list</span>()</span>
+<span id="cb1-33">    </span>
+<span id="cb1-34">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Loop through the search jobs</span></span>
+<span id="cb1-35">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> job <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> search_jobs:</span>
+<span id="cb1-36">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># If the job is a saved search and the owner matches the specified owner</span></span>
+<span id="cb1-37">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'isSavedSearch'</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'1'</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">and</span> job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'access'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'owner'</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> owner:</span>
+<span id="cb1-38">     </span>
+<span id="cb1-39">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize lists to store results</span></span>
+<span id="cb1-40">            results_list <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb1-41">            results_list_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb1-42">            </span>
+<span id="cb1-43">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set the keyword arguments for the search job</span></span>
+<span id="cb1-44">            kwargs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>    {<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"earliest_time"</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'earliestTime'</span>],</span>
+<span id="cb1-45">                         <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"latest_time"</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'latestTime'</span>],</span>
+<span id="cb1-46">                         <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"search_mode"</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"normal"</span>,</span>
+<span id="cb1-47">                         <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"output_mode"</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"json"</span>}</span>
+<span id="cb1-48">                </span>
+<span id="cb1-49">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Get the results of the original job</span></span>
+<span id="cb1-50">            job_results <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> job.results(output_mode<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'json'</span>)</span>
+<span id="cb1-51">            </span>
+<span id="cb1-52">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Parse the results and append them to the results list</span></span>
+<span id="cb1-53">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> x <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results.JSONResultsReader(job_results):</span>
+<span id="cb1-54">                results_list.append(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">dict</span>(x))</span>
+<span id="cb1-55">                    </span>
+<span id="cb1-56">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create a new job with the same search criteria</span></span>
+<span id="cb1-57">            job_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> service.jobs.create(job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'eventSearch'</span>],<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span>kwargs)</span>
+<span id="cb1-58">            </span>
+<span id="cb1-59">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Wait for the new job to finish</span></span>
+<span id="cb1-60">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">while</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">not</span> job_new.is_done():</span>
+<span id="cb1-61">                time.sleep(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb1-62">                    </span>
+<span id="cb1-63">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Get the results of the new job</span></span>
+<span id="cb1-64">            job_results_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> job_new.results(output_mode<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'json'</span>)</span>
+<span id="cb1-65">            </span>
+<span id="cb1-66">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Parse the results and append them to the new results list</span></span>
+<span id="cb1-67">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> y <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results.JSONResultsReader(job_results_new):</span>
+<span id="cb1-68">                results_list_new.append(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">dict</span>(y))</span>
+<span id="cb1-69">                </span>
+<span id="cb1-70">            <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Compare the lengths of the results lists</span></span>
+<span id="cb1-71">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span>(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(results_list) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(results_list_new)):</span>
+<span id="cb1-72">                <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Initialize lists to store issues</span></span>
+<span id="cb1-73">                search_issue <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb1-74">                results_indexed <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb1-75">                results_time <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb1-76">                <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Add the search issue to the list</span></span>
+<span id="cb1-77">                search_issue.append({</span>
+<span id="cb1-78">                    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sid'</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sid'</span>],</span>
+<span id="cb1-79">                    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'label'</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'label'</span>],</span>
+<span id="cb1-80">                    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'earliest_time'</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'earliestTime'</span>],</span>
+<span id="cb1-81">                    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'latest_time'</span>: job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'latestTime'</span>],</span>
+<span id="cb1-82">                })</span>
+<span id="cb1-83">                    </span>
+<span id="cb1-84">                <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Get the unique keys for the results</span></span>
+<span id="cb1-85">                results_keys <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [(d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_raw'</span>), d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_indextime'</span>), d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_time'</span>)) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results_list]</span>
+<span id="cb1-86">                results_keys_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [(d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_raw'</span>), d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_indextime'</span>), d.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'_time'</span>)) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results_list_new]</span>
+<span id="cb1-87">                </span>
+<span id="cb1-88">                <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Find the unique results in the new results list</span></span>
+<span id="cb1-89">                unique_to_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(results_keys_new) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">set</span>(results_keys)</span>
+<span id="cb1-90"></span>
+<span id="cb1-91">                <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># print the unique results</span></span>
+<span id="cb1-92">                <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> unique_to_new:</span>
+<span id="cb1-93">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'SEARCH: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> SID: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'label'</span>],job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sid'</span>]))</span>
+<span id="cb1-94">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'RESULT: DIFFERENCE FOUND'</span>)</span>
+<span id="cb1-95">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'NOTE: This is indicative of a delay issue and resulted in missing events in the original search.'</span>)</span>
+<span id="cb1-96">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)</span>
+<span id="cb1-97">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'List of Missing Results'</span>)</span>
+<span id="cb1-98">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10</span>)</span>
+<span id="cb1-99">                    </span>
+<span id="cb1-100">                    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#format time and set in index</span></span>
+<span id="cb1-101">                    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> key <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> unique_to_new:</span>
+<span id="cb1-102">                        formatted_indextime <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> datetime.utcfromtimestamp(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">int</span>(key[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>])).strftime(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> %H:%M:%S'</span>)</span>
+<span id="cb1-103">                        results_indexed.append(formatted_indextime)</span>
+<span id="cb1-104">                        formatted_time <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> datetime.fromisoformat(key[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>]).strftime(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> %H:%M:%S'</span>)</span>
+<span id="cb1-105">                        results_time.append(formatted_time)</span>
+<span id="cb1-106">                        <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'        _time=</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">,_indextime=</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">,_raw=</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(formatted_time,formatted_indextime,key[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>]))</span>
+<span id="cb1-107">                    </span>
+<span id="cb1-108">                    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#graph the results    </span></span>
+<span id="cb1-109">                    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> graph <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'true'</span>:     </span>
+<span id="cb1-110">                        plot_timeline(search_issue,results_indexed,results_time)</span>
+<span id="cb1-111">                    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-112">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">else</span>:</span>
+<span id="cb1-113">                <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'SEARCH: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> SID: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'label'</span>],job[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'content'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sid'</span>]))</span>
+<span id="cb1-114">                <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'RESULT: NO DELAY FOUND'</span>)</span>
+<span id="cb1-115">                <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'NOTE: Search results in original search and re-ran search match, no delay issue identified.'</span>)</span>
+<span id="cb1-116">                <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-117"> </span>
+<span id="cb1-118"></span>
+<span id="cb1-119"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Function to plot the timeline of the search issue</span></span>
+<span id="cb1-120"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> plot_timeline(search_issue, results_indexed, results_time):</span>
+<span id="cb1-121">    </span>
+<span id="cb1-122">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Convert result issue timestamps to datetime objects</span></span>
+<span id="cb1-123">    indextimes <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [datetime.strptime(d, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> %H:%M:%S'</span>) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results_indexed]</span>
+<span id="cb1-124">    times <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [datetime.strptime(d, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> %H:%M:%S'</span>) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> results_time]</span>
+<span id="cb1-125">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set the title and subtitle for the plot</span></span>
+<span id="cb1-126">    title <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> search_issue[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'label'</span>]</span>
+<span id="cb1-127">    subtitle <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> search_issue[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sid'</span>]</span>
+<span id="cb1-128">    </span>
+<span id="cb1-129">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Get the start and end dates of the search issue and remove timezone and microseconds</span></span>
+<span id="cb1-130">    start_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> datetime.strptime(search_issue[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'earliest_time'</span>], <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">T%H:%M:%S.</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%f</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">%z'</span>)</span>
+<span id="cb1-131">    start_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> start_date.replace(microsecond<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, tzinfo<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>)</span>
+<span id="cb1-132">    end_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> datetime.strptime(search_issue[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'latest_time'</span>], <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%Y-%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">T%H:%M:%S.</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%f</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">%z'</span>)</span>
+<span id="cb1-133">    end_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> end_date.replace(microsecond<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, tzinfo<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>)</span>
+<span id="cb1-134"></span>
+<span id="cb1-135">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create a figure and axis for the plot</span></span>
+<span id="cb1-136">    fig, ax <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> plt.subplots(figsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">6</span>))</span>
+<span id="cb1-137"></span>
+<span id="cb1-138">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the base timeline</span></span>
+<span id="cb1-139">    ax.plot([start_date, end_date], [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>], color<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'black'</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>)</span>
+<span id="cb1-140">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Fill the area between the start and end dates</span></span>
+<span id="cb1-141">    ax.fill_between([start_date, end_date], <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>, color<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'green'</span>, alpha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.2</span>)</span>
+<span id="cb1-142"></span>
+<span id="cb1-143">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Calculate the maximum difference between indextime and start_time</span></span>
+<span id="cb1-144">    max_difference <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">max</span>([<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">abs</span>((date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> start_date).total_seconds()) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> date <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> indextimes] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb1-145">                         [<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">abs</span>((date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> end_date).total_seconds()) <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> date <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> indextimes])</span>
+<span id="cb1-146">    </span>
+<span id="cb1-147">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set the buffer based on the maximum difference</span></span>
+<span id="cb1-148">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">buffer</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> timedelta(seconds<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>max_difference <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.1</span>)</span>
+<span id="cb1-149"></span>
+<span id="cb1-150">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set the x and y limits for the plot</span></span>
+<span id="cb1-151">    ax.set_xlim(start_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">buffer</span>, end_date <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">buffer</span>)</span>
+<span id="cb1-152">    ax.set_ylim(<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.5</span>)</span>
+<span id="cb1-153"></span>
+<span id="cb1-154">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Remove spines and y-axis</span></span>
+<span id="cb1-155">    ax.spines[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'left'</span>].set_visible(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb1-156">    ax.spines[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'right'</span>].set_visible(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb1-157">    ax.spines[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'top'</span>].set_visible(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb1-158">    ax.yaxis.set_visible(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb1-159"></span>
+<span id="cb1-160">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Plot the indexed markers and annotations</span></span>
+<span id="cb1-161">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> idx, date <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">enumerate</span>(indextimes):</span>
+<span id="cb1-162">        ax.plot(date, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'ro'</span>, markersize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Indexed Time for Event'</span>)</span>
+<span id="cb1-163">        ax.annotate(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> - </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(idx,date.strftime(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">-%Y %H:%M:%S'</span>)), xy<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(date, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>), xytext<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(date, <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> (idx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.1</span>),</span>
+<span id="cb1-164">                arrowprops<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">dict</span>(arrowstyle<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-&gt;'</span>, lw<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.5</span>),</span>
+<span id="cb1-165">                fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span>, ha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'center'</span>)</span>
+<span id="cb1-166">        </span>
+<span id="cb1-167">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#plot the time markers and annotations</span></span>
+<span id="cb1-168">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> idx, date <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">enumerate</span>(times):</span>
+<span id="cb1-169">        ax.plot(date, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'bo'</span>, markersize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span>, label<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Time for Event'</span>)</span>
+<span id="cb1-170">        ax.annotate(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"> - </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(idx,date.strftime(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">-%Y %H:%M:%S'</span>)), xy<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(date, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>), xytext<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>(date, <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.1</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> (idx <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.1</span>),</span>
+<span id="cb1-171">                arrowprops<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">dict</span>(arrowstyle<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-&gt;'</span>, lw<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1.5</span>),</span>
+<span id="cb1-172">                fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">12</span>, ha<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'center'</span>)</span>
+<span id="cb1-173"></span>
+<span id="cb1-174">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Set the title, x-axis formatter, and x-axis locator</span></span>
+<span id="cb1-175">    ax.set_title(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>.<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">format</span>(title,subtitle), fontsize<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>, fontweight<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'bold'</span>)</span>
+<span id="cb1-176">    ax.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'%m-</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">-%Y %H:%M:%S'</span>))</span>
+<span id="cb1-177">    ax.xaxis.set_major_locator(mdates.AutoDateLocator())</span>
+<span id="cb1-178"></span>
+<span id="cb1-179">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Create the legend and display unique items</span></span>
+<span id="cb1-180">    handles, labels <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ax.get_legend_handles_labels()</span>
+<span id="cb1-181">    by_label <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">dict</span>(<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">zip</span>(labels, handles))</span>
+<span id="cb1-182">    ax.legend(by_label.values(), by_label.keys(), loc<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'upper left'</span>)</span>
+<span id="cb1-183">    </span>
+<span id="cb1-184">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Adjust layout and display the plot</span></span>
+<span id="cb1-185">    plt.tight_layout()</span>
+<span id="cb1-186">    plt.show()</span>
+<span id="cb1-187"></span>
+<span id="cb1-188"></span>
+<span id="cb1-189"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> banner():</span>
+<span id="cb1-190">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-191">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-192">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">' _____  _____       _____  _   _   _____  _____ _____ _____ _____ _____ _____ _    _ _____'</span>)</span>
+<span id="cb1-193">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">' |    \ |____ |     |___|   \_/    |    \ |____   |   |____ |       |     |    \  /  |____'</span>)</span>
+<span id="cb1-194">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">' |____/ |____ |____ |   |    |     |____/ |____   |   |____ |_____  |   __|__   \/   |____'</span>)</span>
+<span id="cb1-195">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'                                 Splunk Log Delay Detector                            v1.0'</span>)</span>
+<span id="cb1-196">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-197">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'-'</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">90</span>)</span>
+<span id="cb1-198">    </span>
+<span id="cb1-199">    </span>
+<span id="cb1-200"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> main():</span>
+<span id="cb1-201">    </span>
+<span id="cb1-202">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#get config</span></span>
+<span id="cb1-203">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">with</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">open</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'config.json'</span>) <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> f:</span>
+<span id="cb1-204">        data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> json.load(f)</span>
+<span id="cb1-205">        splunk_account <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'splunk_account'</span>]</span>
+<span id="cb1-206">        splunk_password <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'splunk_password'</span>]</span>
+<span id="cb1-207">        base_url <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'base_url'</span>]</span>
+<span id="cb1-208">        port <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'port'</span>]</span>
+<span id="cb1-209">        owner <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'owner'</span>]</span>
+<span id="cb1-210">        graph <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'graph'</span>]</span>
+<span id="cb1-211">  </span>
+<span id="cb1-212">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#show banner</span></span>
+<span id="cb1-213">    banner()</span>
+<span id="cb1-214">  </span>
+<span id="cb1-215">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#connect to splunk</span></span>
+<span id="cb1-216">    service <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> splunk_connect(base_url, port, splunk_account, splunk_password)</span>
+<span id="cb1-217">    </span>
+<span id="cb1-218">    <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#check and compare all jobs by owner</span></span>
+<span id="cb1-219">    compare_jobs(service,owner,graph) </span>
+<span id="cb1-220">    </span>
+<span id="cb1-221">    </span>
+<span id="cb1-222"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">__name__</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"__main__"</span>:</span>
+<span id="cb1-223">    main()</span></code></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+ _____  _____       _____  _   _   _____  _____ _____ _____ _____ _____ _____ _    _ _____
+ |    \ |____ |     |___|   \_/    |    \ |____   |   |____ |       |     |    \  /  |____
+ |____/ |____ |____ |   |    |     |____/ |____   |   |____ |_____  |   __|__   \/   |____
+                                 Splunk Log Delay Detector                            v1.0
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+Connected to Splunk instance: 192.168.42.138
+------------------------------------------------------------------------------------------
+SEARCH: indextime_demo SID: scheduler__splunk__search__RMD51aafb4f9eda25a49_at_1680733200_806
+RESULT: DIFFERENCE FOUND
+NOTE: This is indicative of a delay issue and resulted in missing events in the original search.
+----------
+List of Missing Results
+----------
+        _time=2023-04-05 22:19:59,_indextime=2023-04-05 22:20:02,_raw=critical ransomware L0OdbQcw6y
+        _time=2023-04-05 22:19:57,_indextime=2023-04-05 22:20:00,_raw=critical ransomware 3X1K0CTmxE</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="https://www.blue-prints.blog/content/blog/posts/splunk/splunklogdelay_files/figure-html/cell-2-output-2.png" class="img-fluid"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>------------------------------------------------------------------------------------------
+SEARCH: indextime_demo SID: scheduler__splunk__search__RMD51aafb4f9eda25a49_at_1680566280_768
+RESULT: NO DELAY FOUND
+NOTE: Search results in original search and re-ran search match, no delay issue identified.
+------------------------------------------------------------------------------------------</code></pre>
+</div>
+</div>
+</section>
+<section id="a-solution" class="level3">
+<h3 class="anchored" data-anchor-id="a-solution">A Solution</h3>
+<p>Rather than telling Splunk to alert to items within the last <code>_time</code> window for our searches, we can alert to anything indexed in the time period since our search last ran. This is instead saying, “Splunk tell me about any log that you just discovered”.</p>
+<p>The alert needs to be modified in two ways:</p>
+<ol type="1">
+<li>Update the Alert Query</li>
+<li>Update the Time Window</li>
+</ol>
+<section id="update-alert-query" class="level4">
+<h4 class="anchored" data-anchor-id="update-alert-query">Update Alert Query</h4>
+<p>Splunk can use time modifiers in the search query (<a href="https://docs.splunk.com/Documentation/SCS/current/Search/Timemodifiers">ref</a>). To switch to <code>_indextime</code> alerting we will need to add <code>_index_earliest</code> and <code>_index_latest</code> to our search query. This will define the <code>_indexedtime</code> range we intend to search.</p>
+<p><code>_index_earliest</code> - In most cases, this should be set to the time interval the alert looksback on. (e.g.&nbsp;<code>_index_earliest=-15m</code>)<br>
+</p>
+<p><code>_index_latest</code> - In most cases, this should be set to the current time. (e.g.&nbsp;<code>_index_latest=now()</code>)</p>
+</section>
+<section id="update-time-window" class="level4">
+<h4 class="anchored" data-anchor-id="update-time-window">Update Time Window</h4>
+<p>Switching to <code>_indextime</code> alerting will not remove the use of <code>_time</code>; it is still a filter on the search. Instead, we need to set the <code>_time</code> window to the maximum delay we still want to alert on.</p>
+</section>
+<section id="an-example" class="level4">
+<h4 class="anchored" data-anchor-id="an-example">An Example</h4>
+<p>The below search is updated to alert on <code>_indextime</code> alerting. The figure is marked relative to behavior referenced in the list:</p>
+<ol type="1">
+<li>Search every 15 minutes</li>
+<li>Search everything indexed within the last 15 minutes</li>
+<li>Search everything with _time within the last 14 days*</li>
+</ol>
+<p>*This does not significantly impact processing, it is not the same as processing 14 days of data</p>
+<p><img src="https://www.blue-prints.blog/content/blog/posts/splunk/splunk_blog_2.png" title="Fig 2. Example Updated Splunk Alert" class="img-fluid"> <em>Fig 2. Example Updated Splunk Alert</em></p>
+<p>This alerts runs every 15 minutes, searching logs indexed in the last 15 minutes, and searching logs that Splunk believes are up to 14 days delayed.</p>
+<p>Simply using <code>_time</code> can cause issues with saved searches, even in logs are delayed by minimal amounts. Switching to <code>_indextime</code> alerting reduces this problem significantly and I would recommend running all of the saved searches you can with this method.</p>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <guid>https://www.blue-prints.blog/content/blog/posts/splunk/splunklogdelay.html</guid>
+  <pubDate>Tue, 18 Apr 2023 04:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>

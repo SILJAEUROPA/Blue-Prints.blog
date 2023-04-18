@@ -1,0 +1,14 @@
+[
+  {
+    "listing": "/index.html",
+    "items": [
+      "/content/blog/posts/splunk/splunklogdelay.html"
+    ]
+  },
+  {
+    "listing": "/content/blog/blog.html",
+    "items": [
+      "/content/blog/posts/splunk/splunklogdelay.html"
+    ]
+  }
+]
