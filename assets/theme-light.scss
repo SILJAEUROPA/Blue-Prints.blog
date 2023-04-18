@@ -371,9 +371,6 @@ p {
     }
 
     table {
-        width: auto;
-        margin-left: auto;
-        margin-right: auto;
 
         thead {
             th {
@@ -382,10 +379,6 @@ p {
         }
 
         th,
-        td {
-            padding: .3em 1em;
-        }
-
         thead,
         tbody {
             tr {
@@ -420,12 +413,6 @@ p {
         tr {
             border-color: var(--table-tr-border);
         }
-    }
-
-    .pagedtable table {
-        width: 100%;
-        margin-left: 0;
-        margin-right: 0;
     }
 
     /* DT */
