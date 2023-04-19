@@ -1293,8 +1293,7 @@ NOTE: Search results in original search and re-ran search match, no delay issue 
 <li>Search everything with _time within the last 14 days*</li>
 </ol>
 <p>*This does not significantly impact processing; it is not the same as processing 14 days of data</p>
-<p><img src="https://www.blue-prints.blog/content/blog/posts/splunk/splunk_blog_2.png" title="Fig 2. Example Updated Splunk Alert" class="img-fluid"><br>
-<em>Fig 2. Example Updated Splunk Alert</em></p>
+<p><img src="https://www.blue-prints.blog/content/blog/posts/splunk/splunk_blog_2.png" title="Fig 2. Example Updated Splunk Alert" class="img-fluid"> <em>Fig 2. Example Updated Splunk Alert</em></p>
 <p>This alert behaves in the following manner: 1. Runs every 15 minutes 2. Searches logs indexed in the last 15 minutes 3. Searches logs delayed up to 14 days</p>
 <p>Simply using <code>_time</code> can cause issues with saved searches, even in logs are delayed by minimal amounts. Switching to <code>_indextime</code> alerting reduces this problem significantly. In closing, I recommend running all saved searches with this method.*</p>
 </section>
