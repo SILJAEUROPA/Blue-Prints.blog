@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Michael McKinley">
-<meta name="dcterms.date" content="2023-04-18">
+<meta name="dcterms.date" content="2023-04-19">
 
 <title>Blue-Prints Blog - Log Timing Delays in Splunk Could be Putting Your Security at Risk</title>
 <style>
@@ -176,7 +176,7 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">April 18, 2023</p>
+        <p class="date">April 19, 2023</p>
       </div>
     </div>
     
@@ -206,30 +206,30 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
 
 
 
+<p><strong>BLUF:</strong> Logging delay to Splunk as little as 100ms can cause missed alerts.</p>
 <section id="a-tale-of-two-times" class="level3">
 <h3 class="anchored" data-anchor-id="a-tale-of-two-times">A Tale of Two Times</h3>
-<p><strong>BLUF:</strong> Logging delay to Splunk as little as 100ms can cause alerts to be missed. This post talks about this issue, detection, and offers a solution.</p>
-<p>Splunk is a powerful platform for collecting, indexing, and analyzing data from various sources. However, it is critically important to understand the nuances of how Splunk handles time; forgoing such consideration may lead to missing critical events.</p>
+<p>Splunk is a powerful platform for collecting, indexing and analyzing data from various sources. However, it is critically important to understand the nuances of how Splunk handles time; forgoing such consideration may lead to missing critical events.</p>
 <section id="time" class="level4">
 <h4 class="anchored" data-anchor-id="time">_time</h4>
-<p>The <code>_time</code> field in Splunk represents the timestamp of an event as specified by the source log. This field is critical for time-based analysis, such as identifying trends, detecting anomalies, and correlating events across different sources. This is the time that is visualized by Splunk when viewing search results, and is used as the time variable when performing searches.</p>
+<p>The <code>_time</code> field in Splunk represents the timestamp of an event as specified by the source log. This field is critical for time-based analysis, such as identifying trends, detecting anomalies, and correlating events across different sources. This is the time that Splunk visualizes when viewing search results and is used as the time variable when performing searches.</p>
 </section>
 <section id="indextime" class="level4">
 <h4 class="anchored" data-anchor-id="indextime">_indextime</h4>
-<p>The <code>_indextime</code> field in Splunk represents the timestamp when the event is indexed by Splunk, which may not always be the same as the <code>_time</code> field. Simply, this is the time Splunk logged the event, the time it becomes avaiable in search, and it will almost always differ from <code>_time</code>, even if by miliseconds.</p>
+<p>The <code>_indextime</code> field in Splunk represents the timestamp when Splunk indexes the event, which may not always be the same as the <code>_time</code> field. Simply, it’s the time Splunk logged the event, and it will almost always differ from <code>_time</code> even if by milliseconds.</p>
 </section>
 </section>
 <section id="a-wrinkle-in-time" class="level3">
 <h3 class="anchored" data-anchor-id="a-wrinkle-in-time">A Wrinkle in Time</h3>
-<p>Why do the times differ?</p>
-<p>Truth is, there is delay, there are many points in the ingestion pipeline that can cause delay such as: * Network latency * Logging throughput capacity * Logging interval * Clock skew</p>
-<p>The issue with timing delays in Splunk is that it can cause alerts to be missed, which can have serious consequences for security and other critical operations.</p>
+<p><strong>Why do the times differ?</strong></p>
+<p>Truth is, there is a delay. There are many points in the ingestion pipeline that can cause delay, such as: * Network latency * Logging throughput capacity * Logging interval * Clock skew</p>
+<p>Timing delays in Splunk can cause missed alerts, which may result in serious consequences for security and other critical operations.</p>
 <p>For instance, if an alert is monitoring a critical system, but there is a delay between the <code>_time</code> and <code>_indextime</code> timestamps, <strong>the alert may not be triggered even when events occur.</strong></p>
 </section>
 <section id="small-delay-big-problem" class="level3">
 <h3 class="anchored" data-anchor-id="small-delay-big-problem">Small Delay = Big Problem</h3>
-<p>How much delay can cause events to be missed?</p>
-<p>This is a question that many previous discussions on this topic fail to address. While many may note delays of days, hours, or minutes, causing issue; it is important to note that <strong>delays of milliseconds can result in missed events</strong>. In testing, delays as little as 100ms resulted in missed events, and theoretically, the number may even be lower. This raises an important question - are you confident that all of your critical logging sources consistently log in near real-time?</p>
+<p><strong>How much delay can cause missed events?</strong></p>
+<p>Delays of milliseconds can result in missed events. During testing in the worst case scenario, <strong>delays of 100ms resulted in missed events</strong>. Theoretically the delay can be even be lower. This raises an important question - are you confident that all of your critical logging sources consistently log in near real-time?</p>
 </section>
 <section id="delay-detection" class="level3">
 <h3 class="anchored" data-anchor-id="delay-detection">Delay Detection</h3>
@@ -239,8 +239,9 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
 <p><code>index=example_delay | eval delay_sec=_indextime-_time | eval delay_minute=(delay_sec/60) | timechart span=1h avg(delay_minute) by index</code></p>
 <p><img src="splunk_blog_1.png" title="Fig 1. Example Timechart for Splunk Search" class="quarto-discovered-preview-image img-fluid"> <em>Fig 1. Example Timechart for Splunk Search</em></p>
 <p><strong>Can I discover if any of my recent saved searches missed events?</strong></p>
-<p>Yes, a simple method is to re-run the same search and compare the results, if the results differ over the same time period, there is likely a timing issue.</p>
-<p>Below is an example script in python to identify saved searches with timing issues. For information on usage go: <a href="#link">here</a>. I’ve run this script against an lab instance of Splunk with intentially induced delays, the results are below.</p>
+<p>Yes, a simple method is to re-run the search over the same period and compare the results. If the results differ over there is likely a timing issue.</p>
+<p>Below is an example script in Python to identify saved searches with timing issues. Usage information: <a href="#link">here</a>.</p>
+<p>I’ve run this script against a lab instance of Splunk with intentionally induced delays, the results are below.</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
@@ -502,35 +503,40 @@ NOTE: Search results in original search and re-ran search match, no delay issue 
 </section>
 <section id="a-solution" class="level3">
 <h3 class="anchored" data-anchor-id="a-solution">A Solution</h3>
-<p>Rather than telling Splunk to alert to items within the last <code>_time</code> window for our searches, we can alert to anything indexed in the time period since our search last ran. This is instead saying, “Splunk tell me about any log that you just discovered”.</p>
-<p>The alert needs to be modified in two ways:</p>
+<p>Rather than telling Splunk to alert to items within the last <code>_time</code> window for our searches, we can alert to anything indexed in the period since our search last ran. Instead saying, “Splunk tell me about any log you just discovered.”</p>
+<p>To do this the alert requires two modifications:</p>
 <ol type="1">
 <li>Update the Alert Query</li>
 <li>Update the Time Window</li>
 </ol>
 <section id="update-alert-query" class="level4">
 <h4 class="anchored" data-anchor-id="update-alert-query">Update Alert Query</h4>
-<p>Splunk can use time modifiers in the search query (<a href="https://docs.splunk.com/Documentation/SCS/current/Search/Timemodifiers">ref</a>). To switch to <code>_indextime</code> alerting we will need to add <code>_index_earliest</code> and <code>_index_latest</code> to our search query. This will define the <code>_indexedtime</code> range we intend to search.</p>
-<p><code>_index_earliest</code> - In most cases, this should be set to the time interval the alert looksback on. (e.g.&nbsp;<code>_index_earliest=-15m</code>)<br>
+<p>Splunk can use time modifiers in the search query (<a href="https://docs.splunk.com/Documentation/SCS/current/Search/Timemodifiers">ref</a>). To switch to <code>_indextime</code> alerting we need to add <code>_index_earliest</code> and <code>_index_latest</code> to our search query. These parameters define the <code>_indextime</code> range we intend to search.</p>
+<p><code>_index_earliest</code> - In most cases, set this to the time interval the alert looks back on. (e.g.&nbsp;<code>_index_earliest=-15m</code>)<br>
 </p>
 <p><code>_index_latest</code> - In most cases, this should be set to the current time. (e.g.&nbsp;<code>_index_latest=now()</code>)</p>
 </section>
 <section id="update-time-window" class="level4">
 <h4 class="anchored" data-anchor-id="update-time-window">Update Time Window</h4>
-<p>Switching to <code>_indextime</code> alerting will not remove the use of <code>_time</code>; it is still a filter on the search. Instead, we need to set the <code>_time</code> window to the maximum delay we still want to alert on.</p>
+<p>Switching to <code>_indextime</code> alerting will not remove the use of <code>_time</code>; it is still a filter on the search. Instead, <code>_time</code> is now the maximum log delay that still generates an alert.</p>
 </section>
 <section id="an-example" class="level4">
 <h4 class="anchored" data-anchor-id="an-example">An Example</h4>
-<p>The below search is updated to alert on <code>_indextime</code> alerting. The figure is marked relative to behavior referenced in the list:</p>
+<p>The below search is updated to alert on <code>_indextime</code> alerting. The figure is marked relative to the behavior referenced in the list:</p>
 <ol type="1">
 <li>Search every 15 minutes</li>
 <li>Search everything indexed within the last 15 minutes</li>
 <li>Search everything with _time within the last 14 days*</li>
 </ol>
-<p>*This does not significantly impact processing, it is not the same as processing 14 days of data</p>
-<p><img src="splunk_blog_2.png" title="Fig 2. Example Updated Splunk Alert" class="img-fluid"> <em>Fig 2. Example Updated Splunk Alert</em></p>
-<p>This alerts runs every 15 minutes, searching logs indexed in the last 15 minutes, and searching logs that Splunk believes are up to 14 days delayed.</p>
-<p>Simply using <code>_time</code> can cause issues with saved searches, even in logs are delayed by minimal amounts. Switching to <code>_indextime</code> alerting reduces this problem significantly and I would recommend running all of the saved searches you can with this method.</p>
+<p>*This does not significantly impact processing; it is not the same as processing 14 days of data</p>
+<p><img src="splunk_blog_2.png" title="Fig 2. Example Updated Splunk Alert" class="img-fluid"><br>
+<em>Fig 2. Example Updated Splunk Alert</em></p>
+<p>This alert behaves in the following manner: 1. Runs every 15 minutes 2. Searches logs indexed in the last 15 minutes 3. Searches logs delayed up to 14 days</p>
+<p>Simply using <code>_time</code> can cause issues with saved searches, even in logs are delayed by minimal amounts. Switching to <code>_indextime</code> alerting reduces this problem significantly. In closing, I recommend running all saved searches with this method.*</p>
+</section>
+<section id="additional-items" class="level4">
+<h4 class="anchored" data-anchor-id="additional-items">Additional Items</h4>
+<p>This post did not address the following: * This does not address or identify issues that set <code>_time</code> in the future. These should be identified separately and remediated. * Certain saved searches may require additional effort to adopt this method. For example: searches with subsearches, searches with multiple time frames, searches in which <code>_time</code> is a part of calculations or needs to be precise. * Switching to <code>_indextime</code> alerting is not a substitute for fixing unacceptable logging delay.</p>
 
 
 </section>
