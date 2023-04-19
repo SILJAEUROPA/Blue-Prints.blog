@@ -6,6 +6,7 @@ website:
   description: "Blue-Prints Information Security Blog"
   site-url: https://www.blue-prints.blog/
   site-path: '/'
+  favicon: assets/favicon.ico
   twitter-card: true
   open-graph: true
   google-analytics: 
@@ -38,6 +39,7 @@ execute:
 
 resources:
   - CNAME
+
 
 
 
