@@ -36,7 +36,13 @@
 <section id="a-wrinkle-in-time" class="level3">
 <h3 class="anchored" data-anchor-id="a-wrinkle-in-time">A Wrinkle in Time</h3>
 <p><strong>Why do the times differ?</strong></p>
-<p>Truth is, there is a delay. There are many points in the ingestion pipeline that can cause delay, such as: * Network latency * Logging throughput capacity * Logging interval * Clock skew</p>
+<p>Truth is, there is a delay. There are many points in the ingestion pipeline that can cause delay, such as:</p>
+<ul>
+<li>Network latency</li>
+<li>Logging throughput capacity</li>
+<li>Logging interval</li>
+<li>Clock skew</li>
+</ul>
 <p>Timing delays in Splunk can cause missed alerts, which may result in serious consequences for security and other critical operations.</p>
 <p>For instance, if an alert is monitoring a critical system, but there is a delay between the <code>_time</code> and <code>_indextime</code> timestamps, <strong>the alert may not be triggered even when events occur.</strong></p>
 </section>
@@ -1299,7 +1305,12 @@ NOTE: Search results in original search and re-ran search match, no delay issue 
 </section>
 <section id="additional-items" class="level4">
 <h4 class="anchored" data-anchor-id="additional-items">Additional Items</h4>
-<p>This post did not address the following: * This does not address or identify issues that set <code>_time</code> in the future. These should be identified separately and remediated. * Certain saved searches may require additional effort to adopt this method. For example: searches with subsearches, searches with multiple time frames, searches in which <code>_time</code> is a part of calculations or needs to be precise. * Switching to <code>_indextime</code> alerting is not a substitute for fixing unacceptable logging delay.</p>
+<p>This post did not address the following:</p>
+<ul>
+<li>This does not address or identify issues that set <code>_time</code> in the future. These should be identified separately and remediated.</li>
+<li>Certain saved searches may require additional effort to adopt this method. For example: searches with subsearches, searches with multiple time frames, searches in which <code>_time</code> is a part of calculations or needs to be precise.</li>
+<li>Switching to <code>_indextime</code> alerting is not a substitute for fixing unacceptable logging delay.</li>
+</ul>
 
 
 </section>
