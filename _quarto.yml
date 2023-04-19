@@ -3,12 +3,14 @@ project:
 
 website:
   title: "Blue-Prints Blog"
+  description: "Blue-Prints Information Security Blog"
   site-url: https://www.blue-prints.blog/
   site-path: '/'
+  twitter-card: true
+  open-graph: true
   google-analytics: 
     tracking-id: "G-XGT9C0L1TL"
     anonymize-ip: true
-  description: "Blue-Prints Information Security Blog"
   navbar:
     background: "#2e3f58"
     left:
