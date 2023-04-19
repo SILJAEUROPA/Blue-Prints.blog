@@ -8,6 +8,7 @@ website:
   site-path: '/'
   favicon: assets/favicon.ico
   twitter-card: true
+    image: "asset/blog_icons/test_card.png"
   open-graph: true
   google-analytics: 
     tracking-id: "G-XGT9C0L1TL"
