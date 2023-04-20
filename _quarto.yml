@@ -43,6 +43,7 @@ execute:
 
 resources:
   - CNAME
+  - assets/blog_icons/test_card.png
 
 
 
