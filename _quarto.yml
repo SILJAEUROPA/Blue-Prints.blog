@@ -7,9 +7,9 @@ website:
   site-url: https://www.blue-prints.blog/
   favicon: assets/favicon.ico
 
-  twitter-card: true
+  twitter-card: 
     image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
-  open-graph: true
+  open-graph: 
     image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
 
   google-analytics: 
