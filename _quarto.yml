@@ -5,11 +5,12 @@ website:
   title: "Blue-Prints Blog"
   description: "Blue-Prints Information Security Blog"
   site-url: https://www.blue-prints.blog/
-  site-path: '/'
   favicon: assets/favicon.ico
 
   twitter-card: true
+    image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
   open-graph: true
+    image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
 
   google-analytics: 
     tracking-id: "G-XGT9C0L1TL"
