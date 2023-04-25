@@ -8,9 +8,9 @@ website:
   favicon: assets/favicon.ico
 
   twitter-card: 
-    image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
+    image: "https://www.blue-prints.blog/assets/blog_icons/card.png"
   open-graph: 
-    image: "https://www.blue-prints.blog/assets/blog_icons/test_card.png"
+    image: "https://www.blue-prints.blog/assets/blog_icons/card.png"
 
   google-analytics: 
     tracking-id: "G-XGT9C0L1TL"
