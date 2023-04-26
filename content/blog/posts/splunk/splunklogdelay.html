@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.287">
+<meta name="generator" content="quarto-99.9.9">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -111,11 +111,11 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
 
 <meta property="og:title" content="Blue-Prints Blog - Log Timing Delays in Splunk Could be Putting Your Security at Risk">
 <meta property="og:description" content="">
-<meta property="og:image" content="https://www.blue-prints.blog/assets/blog_icons/test_card.png">
+<meta property="og:image" content="https://www.blue-prints.blog/assets/blog_icons/card.png">
 <meta property="og:site-name" content="Blue-Prints Blog">
 <meta name="twitter:title" content="Blue-Prints Blog - Log Timing Delays in Splunk Could be Putting Your Security at Risk">
 <meta name="twitter:description" content="">
-<meta name="twitter:image" content="https://www.blue-prints.blog/assets/blog_icons/test_card.png">
+<meta name="twitter:image" content="https://www.blue-prints.blog/assets/blog_icons/card.png">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
@@ -252,7 +252,7 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
 <p>Yes, Splunk has a great article on this: <a href="https://docs.splunk.com/Documentation/Splunk/9.0.4/Troubleshooting/Troubleshootingeventsindexingdelay">here</a>.</p>
 <p>TL;DR To discover log delays subtract <code>_time</code> from <code>_indextime</code>.</p>
 <p><code>index=example_delay | eval delay_sec=_indextime-_time | eval delay_minute=(delay_sec/60) | timechart span=1h avg(delay_minute) by index</code></p>
-<p><img src="splunk_blog_1.png" title="Fig 1. Example Timechart for Splunk Search" class="quarto-discovered-preview-image img-fluid"> <em>Fig 1. Example Timechart for Splunk Search</em></p>
+<p><img src="splunk_blog_1.png" title="Fig 1. Example Timechart for Splunk Search" class="img-fluid"> <em>Fig 1. Example Timechart for Splunk Search</em></p>
 <p><strong>Can I discover if any of my recent saved searches missed events?</strong></p>
 <p>Yes, a simple method is to re-run the search over the same period and compare the results. If the results differ over there is likely a timing issue.</p>
 <p>Below is an example script in Python to identify saved searches with timing issues. Usage information: <a href="https://github.com/SILJAEUROPA/Splunk-Delay-Detector">here</a>.</p>
@@ -502,17 +502,15 @@ NOTE: This is indicative of a delay issue and resulted in missing events in the 
 List of Missing Results
 ----------
         _time=2023-04-05 22:19:59,_indextime=2023-04-05 22:20:02,_raw=critical ransomware L0OdbQcw6y
-        _time=2023-04-05 22:19:57,_indextime=2023-04-05 22:20:00,_raw=critical ransomware 3X1K0CTmxE</code></pre>
-</div>
-<div class="cell-output cell-output-display">
-<p><img src="splunklogdelay_files/figure-html/cell-2-output-2.png" class="img-fluid"></p>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>------------------------------------------------------------------------------------------
+        _time=2023-04-05 22:19:57,_indextime=2023-04-05 22:20:00,_raw=critical ransomware 3X1K0CTmxE
+------------------------------------------------------------------------------------------
 SEARCH: indextime_demo SID: scheduler__splunk__search__RMD51aafb4f9eda25a49_at_1680566280_768
 RESULT: NO DELAY FOUND
 NOTE: Search results in original search and re-ran search match, no delay issue identified.
 ------------------------------------------------------------------------------------------</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="splunklogdelay_files/figure-html/cell-2-output-2.png" class="img-fluid"></p>
 </div>
 </div>
 </section>
@@ -783,6 +781,30 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       const id = href.replace(/^#\/?/, "");
       const note = window.document.getElementById(id);
       return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, function() {
+      let href = xref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children.length > 2) {
+          for (let i = 0; i < 2; i++) {
+            container.appendChild(note.children[i].cloneNode(true));
+          }
+          return container.innerHTML
+        } else {
+          return note.innerHTML;
+        }
+      } else {
+        return note.innerHTML;
+      }
     });
   }
       let selectedAnnoteEl;

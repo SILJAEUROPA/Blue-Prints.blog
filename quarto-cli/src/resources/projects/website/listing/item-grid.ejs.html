@@ -6,9 +6,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="description" content="A blog for technical information security topics and interesting things we find along the way.">
 
-<title>Blue-Prints Blog</title>
+<title>Blue-Prints Blog – item-grid.ejs</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -24,28 +23,25 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<link href="./assets/favicon.ico" rel="icon">
-<script src="site_libs/quarto-listing/list.min.js"></script>
-<script src="site_libs/quarto-listing/quarto-listing.js"></script>
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/quarto-contrib/bootstrap-icons-1.9.1/all.css" rel="stylesheet">
+<script src="../../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../../">
+<link href="../../../../../../assets/favicon.ico" rel="icon">
+<script src="../../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../../../../../../site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="../../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../../../../../site_libs/bootstrap/bootstrap-dark.min.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -65,35 +61,6 @@ ul.task-list li input[type="checkbox"] {
     "search-submit-button-title": "Submit"
   }
 }</script>
-<script>
-
-  window.document.addEventListener("DOMContentLoaded", function (_event) {
-    const listingTargetEl = window.document.querySelector('#listing-blog-posts .list');
-    if (!listingTargetEl) {
-      // No listing discovered, do not attach.
-      return; 
-    }
-
-    const options = {
-      valueNames: ['listing-title','listing-date',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-title-sort'] }],
-      
-      searchColumns: ["listing-date","listing-title","listing-author"],
-    };
-
-    window['quarto-listings'] = window['quarto-listings'] || {};
-    window['quarto-listings']['listing-blog-posts'] = new List('listing-blog-posts', options);
-
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  });
-
-  window.addEventListener('hashchange',() => {
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  })
-  </script>
 <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-XGT9C0L1TL"></script>
 
 <script type="text/javascript">
@@ -105,17 +72,7 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
 </script>
 <style>html{ scroll-behavior: smooth; }</style>
 
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
-<link rel="alternate" type="application/rss+xml" title="Blue-Prints Blog" href="index.xml"><meta property="og:title" content="">
-<meta property="og:description" content="A blog for technical information security topics and interesting things we find along the way.">
-<meta property="og:image" content="https://www.blue-prints.blog/assets/blog_icons/card.png">
-<meta property="og:site-name" content="Blue-Prints Blog">
-<meta name="twitter:title" content="">
-<meta name="twitter:description" content="A blog for technical information security topics and interesting things we find along the way.">
-<meta name="twitter:image" content="https://www.blue-prints.blog/assets/blog_icons/card.png">
-<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-fixed">
@@ -125,7 +82,7 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
     <nav class="navbar navbar-expand-lg navbar-dark ">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../../../../../index.html">
     <span class="navbar-title">Blue-Prints Blog</span>
     </a>
   </div>
@@ -136,17 +93,17 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" rel="" target="" aria-current="page">
+    <a class="nav-link" href="../../../../../../index.html" rel="" target="">
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./content/blog/blog.html" rel="" target="">
+    <a class="nav-link" href="../../../../../../content/blog/blog.html" rel="" target="">
  <span class="menu-text">Blog</span></a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="./content/blog/blog.xml" rel="" target=""><i class="bi bi-rss" role="img">
+    <a class="nav-link" href="../../../../../../content/blog/blog.xml" rel="" target=""><i class="bi bi-rss" role="img">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
@@ -164,80 +121,105 @@ gtag('config', 'G-XGT9C0L1TL', { 'anonymize_ip': true});
     </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#about-the-contributors" id="toc-about-the-contributors" class="nav-link active" data-scroll-target="#about-the-contributors">About the Contributors</a></li>
-  <li><a href="#blog-posts" id="toc-blog-posts" class="nav-link" data-scroll-target="#blog-posts">Blog Posts</a></li>
-  <li><a href="#subscribe" id="toc-subscribe" class="nav-link" data-scroll-target="#subscribe">Subscribe</a></li>
-  </ul>
-</nav>
+        
     </div>
 <!-- main -->
-<main class="content column-page-left" id="quarto-document-content">
+<main class="content" id="quarto-document-content">
 
 
 
-<section id="about-the-contributors" class="level3">
-<h3 class="anchored" data-anchor-id="about-the-contributors">About the Contributors</h3>
-<div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true"><i class="bi-twitter " style="" role="img" aria-hidden="true"></i> <span class="citation" data-cites="McKinleyMike">@McKinleyMike</span></a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false"><i class="bi-twitter " style="" role="img" aria-hidden="true"></i> <span class="citation" data-cites="TheLatteri">@TheLatteri</span></a></li></ul>
-<div class="tab-content">
-<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<p>Michael McKinley is a Lead Security Engineer in the financial services sector. He is responsible for detecting, disrupting, profiling, and disclosing attacks by APTs targeting the financial industry, such as the attempt by FIN7 to spread malware through the spoofing of the SEC EDGAR filing system. Additionally, Michael has discovered and disclosed security vulnerabilities in leading enterprise software.</p>
-<p>When not hacking, Michael enjoys spending time in the great outdoors.</p>
+<p>&lt;% // Fields const fields = listing.fields;</p>
+<p>// Card alignment const align = listing[“grid-item-align”] || “left”;</p>
+<p>// Borders const hideBorders = listing[‘grid-item-border’] === false;</p>
+<p>// Cap Options const imgHeight = listing[‘image-height’];</p>
+<p>// shorthand checks const showField = (field) =&gt; { return listing.fields.includes(field) &amp;&amp; item[field] !== undefined; }</p>
+<p>// Capture the item number for utility functions that need it const itemNumber = listing.utilities.itemNumber();</p>
+<p>// Fields that should be bucketized into the general listing at the bottom const otherFields = fields.filter(field =&gt; { return [“title”, “image”, “image-alt”, “date”, “author”, “subtitle”, “description”, “filename”, “file-modified”, “reading-time”, “categories”].includes(field); }); %&gt;</p>
+
+<div class="g-col-1" <%="listing.utilities.metadataAttrs(item)" %="">&gt;
+<a href="<%- item.path %>" class="quarto-grid-link">
+<div class="quarto-grid-item card h-100 <%-`card-${align}`%><%= hideBorders ? ' borderless' : '' %>">
+
+&lt;% if (fields.includes('image')) { %&gt;
+
+&lt;% if (item.image) { %&gt;
+
+<p class="card-img-top">
+&lt;%= listing.utilities.img(itemNumber, item.image, "thumbnail-image card-img", item['image-alt']) %&gt;
+</p>
+&lt;% } else { %&gt;
+&lt;%= listing.utilities.imgPlaceholder(itemNumber, item.outputHref) %&gt;
+&lt;% } %&gt;
+
+&lt;% } %&gt;
+&lt;% if (showField('title') || showField('subtitle') || showField('description') || showField('author') || showField('date') || otherFields.length &gt; 0) { %&gt;
+
+<div class="card-body post-contents">
+&lt;% if (showField('title')) { %&gt;<h5 class="no-anchor card-title listing-title">&lt;%= item.title %&gt;</h5>&lt;% } %&gt;
+&lt;% if (showField('subtitle')) { %&gt;<div class="card-subtitle listing-subtitle">&lt;%= item.subtitle %&gt;</div>&lt;% } %&gt;
+&lt;% if (showField('reading-time')) { %&gt;<div class="listing-reading-time card-text text-muted">&lt;%= item['reading-time'] %&gt;</div> &lt;% } %&gt;
+
+&lt;% if (fields.includes('categories') &amp;&amp; item.categories) { %&gt;
+
+<div class="listing-categories">
+  &lt;% for (const category of item.categories) { %&gt;
+<div class="listing-category" onclick="window.quartoListingCategory('<%=category%>'); return false;">&lt;%= category %&gt;</div>
+  &lt;% } %&gt;
 </div>
-<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<p>Tony Latteri is a seasoned blue team operator and Principal Security Engineer in the financial services sector with a passion to deny, degrade, and disrupt cyber adversary operations.</p>
-<p>When not bringing pain to the adversary, Tony enjoys picking up and putting down heavy things.</p>
-</div>
-</div>
-</div>
-</section>
-<section id="blog-posts" class="level2">
-<h2 class="anchored" data-anchor-id="blog-posts">Blog Posts</h2>
-<div id="listing-blog-posts" class="quarto-listing quarto-listing-container-table">
 
-<table class="quarto-listing-table table">
-<thead>
-<tr>
-<th>
-Title
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody class="list">
-<tr data-index="0" data-listing-date-sort="1681862400000" data-listing-file-modified-sort="1682552234111" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="4" data-listing-title-sort="Log Timing Delays in Splunk Could be Putting Your Security at Risk" data-listing-filename-sort="splunklogdelay.ipynb">
-<td>
-<a href="./content/blog/posts/splunk/splunklogdelay.html" class="title listing-title">Log Timing Delays in Splunk Could be Putting Your Security at Risk</a>
-</td>
-<td>
-<span class="listing-date">4/19/23</span>
-</td>
-</tr>
-</tbody>
+&lt;% } %&gt;
+&lt;% if (showField('description')) { %&gt;
 
-</table>
-<div class="listing-no-matching d-none">
-No matching items
+<div class="card-text listing-description delink">&lt;%= item.description %&gt;</div>
+&lt;% } %&gt;
+&lt;% 
+const flexJustify = showField('author') &amp;&amp; showField('date') ? "justify" : showField('author') ? "start" : "end";
+%&gt;
+&lt;% if (showField('author') || showField('date')) { %&gt;
+<div class="card-attribution card-text-small <%-flexJustify%>">
+&lt;% if (showField('author')) { %&gt;<div class="listing-author">&lt;%= item.author %&gt;</div>&lt;% } %&gt;
+&lt;% if (showField('date')) { %&gt;<div class="listing-date">`&lt;%= item.date %&gt;`{=html}</div>&lt;% } %&gt;
 </div>
-</div>
-</section>
-<section id="subscribe" class="level2">
-<h2 class="anchored" data-anchor-id="subscribe">Subscribe</h2>
-<p>Subscribe via <a href="content/blog/blog.xml"><i class="bi-rss " style="" role="img" aria-hidden="true"></i></a> RSS to recieve updates.</p>
+&lt;% } %&gt;
+
+&lt;% if (otherFields.length &gt; 0) { %&gt;
 
 
+&lt;% for (const field of otherFields) { %&gt;
 
-</section>
+&lt;% } %&gt;
+<table class="card-other-values"><tbody><tr>
+<td>&lt;%= listing.utilities.fieldName(field) %&gt;</td>
+<td class="<%-field%>">&lt;%= listing.utilities.outputLink(item, field) %&gt;</td>
+</tr></tbody></table>
+
+&lt;% } %&gt;
+
+</div>
+&lt;% } %&gt;
+
+&lt;% if (fields.includes('filename') || fields.includes('file-modified')) { %&gt;
+
+<div class="card-footer">
+&lt;% if (fields.includes('filename')) { %&gt;
+<div class="card-filename listing-filename">
+&lt;%= item.filename ? item.filename : "&nbsp;" %&gt;
+</div>
+&lt;% } %&gt;
+&lt;% if (fields.includes('file-modified')) { %&gt;
+<div class="card-file-modified listing-file-modified">
+&lt;%= item['file-modified'] ? item['file-modified'] : "&nbsp;"%&gt;
+</div>
+&lt;% } %&gt;
+</div>
+&lt;% } %&gt;
+</div></a></div>
+
+
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -616,5 +598,5 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 
 
 
-<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+<script src="../../../../../../site_libs/quarto-html/zenscroll-min.js"></script>
 </body></html>
