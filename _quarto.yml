@@ -8,7 +8,7 @@ website:
   favicon: assets/favicon.ico
 
   twitter-card: 
-    image: "https://www.blue-prints.blog/assets/blog_icons/card.png"
+    image: "https://www.blue-prints.blog/assets/blog_icons/twitter_card.png"
   open-graph: 
     image: "https://www.blue-prints.blog/assets/blog_icons/card.png"
 
@@ -44,7 +44,7 @@ execute:
 resources:
   - CNAME
   - assets/blog_icons/card.png
-  - assets/blog_icons/test_card.png
+  - assets/blog_icons/twitter_card.png
 
 
 
