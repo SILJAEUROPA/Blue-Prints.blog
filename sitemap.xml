@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.blue-prints.blog/content/blog/posts/splunk/splunklogdelay.html</loc>
-    <lastmod>2023-04-27T23:47:16.232Z</lastmod>
+    <loc>https://www.blue-prints.blog/index.html</loc>
+    <lastmod>2023-09-20T21:12:25.371Z</lastmod>
   </url>
   <url>
     <loc>https://www.blue-prints.blog/content/blog/blog.html</loc>
-    <lastmod>2023-04-27T23:47:16.688Z</lastmod>
+    <lastmod>2023-09-20T21:12:25.631Z</lastmod>
   </url>
   <url>
-    <loc>https://www.blue-prints.blog/index.html</loc>
-    <lastmod>2023-04-27T23:47:17.180Z</lastmod>
+    <loc>https://www.blue-prints.blog/content/blog/posts/lolbin/addinutil-lolbas.html</loc>
+    <lastmod>2023-09-20T21:12:26.381Z</lastmod>
+  </url>
+  <url>
+    <loc>https://www.blue-prints.blog/content/blog/posts/splunk/splunklogdelay.html</loc>
+    <lastmod>2023-09-20T21:12:26.711Z</lastmod>
   </url>
 </urlset>
