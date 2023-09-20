@@ -64,6 +64,26 @@ $footer-fg: #cad2dd;
     --bs-table-striped-bg: #2d3143;
 }
 
+.gist .blob-code-inner {
+    color: rgb(202, 210, 221) !important;
+}
+
+.gist .gist-data {
+    background-color: #35394b !important;
+}
+
+.gist .gist-file {
+    border: 0px solid #ddd !important;
+      border-bottom-width: 0px !important;
+    border-bottom: 0px solid #ccc !important;
+    border-radius: 0px !important;
+}
+
+.gist .gist-meta {
+    background-color: #35394b !important;
+    color: rgb(202, 210, 221) !important;
+}
+
 body {
     color-scheme: dark;
 }
