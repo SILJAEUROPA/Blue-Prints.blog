@@ -22,7 +22,7 @@
 
 <section id="tldr" class="level3">
 <h3 class="anchored" data-anchor-id="tldr">TLDR;</h3>
-<p>An investigation discovered an adversary exploiting the native Microsoft.NET binary AddinUtil.exe to proxy execution. We go on a journey to reproduce their attack, document a previously unknown LOLBAS technique, and provide detection opportunities to the community.</p>
+<p>Our investigation discovered an adversary exploiting an undocumented attack using the native Microsoft .NET binary AddinUtil.exe to proxy execution. We go on a journey to reproduce their attack, document the LOLBAS technique, and provide detection opportunities to the community.</p>
 </section>
 <section id="introduction" class="level3">
 <h3 class="anchored" data-anchor-id="introduction">Introduction</h3>
