@@ -1,5 +1,5 @@
 ---
-title: "Blog Direcotry"
+title: "Blog Directory"
 comments: false
 listing:
   feed: true
